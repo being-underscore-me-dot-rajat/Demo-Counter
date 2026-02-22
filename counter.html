@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Counter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=Orbitron:wght@700;900&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── DARK THEME ── */
+    [data-theme="dark"] {
+      --bg: #0a0a0a;
+      --accent: #e8ff47;
+      --accent2: #ff4d6d;
+      --text: #f0f0f0;
+      --muted: #444;
+      --btn-inc-text: #0a0a0a;
+      --tick-bg: #333;
+      --shadow-color: #ff4d6d;
+      --glow: none;
+      --font-display: 'Bebas Neue', sans-serif;
+    }
+
+    /* ── MONOCHROME THEME ── */
+    [data-theme="mono"] {
+      --bg: #f2f2ee;
+      --accent: #111111;
+      --accent2: #666666;
+      --text: #111111;
+      --muted: #aaaaaa;
+      --btn-inc-text: #f2f2ee;
+      --tick-bg: #cccccc;
+      --shadow-color: #999999;
+      --glow: none;
+      --font-display: 'Bebas Neue', sans-serif;
+    }
+
+    /* ── SCI-FI THEME ── */
+    [data-theme="scifi"] {
+      --bg: #020d1a;
+      --accent: #00ffe7;
+      --accent2: #0055ff;
+      --text: #c8f0ff;
+      --muted: #1a4060;
+      --btn-inc-text: #020d1a;
+      --tick-bg: #0a2a40;
+      --shadow-color: #0066ff;
+      --glow: 0 0 18px #00ffe7bb, 0 0 50px #00ffe722;
+      --font-display: 'Orbitron', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: background 0.45s ease, color 0.45s ease;
+      position: relative;
+    }
+
+    /* grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 100;
+      opacity: 0.25;
+    }
+
+    /* scanlines for scifi */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,255,231,0.018) 2px, rgba(0,255,231,0.018) 4px
+      );
+      pointer-events: none;
+      z-index: 99;
+      opacity: 0;
+      transition: opacity 0.5s;
+    }
+    [data-theme="scifi"] body::after { opacity: 1; }
+
+    /* ── Theme bar ── */
+    .theme-bar {
+      position: fixed;
+      top: 1.4rem;
+      right: 1.5rem;
+      display: flex;
+      gap: 0.45rem;
+      z-index: 200;
+    }
+
+    .theme-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.58rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.8rem;
+      border-radius: 2px;
+      cursor: pointer;
+      border: 1px solid var(--muted);
+      background: transparent;
+      color: var(--muted);
+      transition: all 0.25s;
+    }
+
+    .theme-btn:hover, .theme-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: var(--glow);
+    }
+
+    /* ── Wrapper ── */
+    .wrapper {
+      text-align: center;
+      position: relative;
+    }
+
+    .label {
+      font-size: 0.62rem;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      transition: color 0.4s;
+    }
+
+    /* ── Display ── */
+    .display {
+      position: relative;
+      margin-bottom: 3rem;
+      padding: 0.5rem 1rem;
+      transition: border-color 0.4s;
+    }
+
+    /* sci-fi corner brackets */
+    .bracket {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      opacity: 0;
+      transition: opacity 0.5s;
+      pointer-events: none;
+    }
+    .bracket-tl { top: 0; left: 0; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+    .bracket-tr { top: 0; right: 0; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+    .bracket-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+    .bracket-br { bottom: 0; right: 0; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+    [data-theme="scifi"] .bracket { opacity: 1; }
+
+    /* mono underline */
+    .mono-line {
+      position: absolute;
+      bottom: 0; left: 10%; right: 10%;
+      height: 3px;
+      background: var(--accent);
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+    [data-theme="mono"] .mono-line { opacity: 1; }
+
+    /* pulsing ring for scifi */
+    .ring {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s;
+      animation: pulse 3s ease-in-out infinite;
+    }
+    [data-theme="scifi"] .ring { opacity: 0.12; }
+
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%,-50%) scale(1); opacity: 0.12; }
+      50% { transform: translate(-50%,-50%) scale(1.1); opacity: 0.04; }
+    }
+
+    .count {
+      font-family: var(--font-display);
+      font-size: clamp(7rem, 22vw, 16rem);
+      line-height: 1;
+      color: var(--text);
+      display: block;
+      transition: transform 0.08s ease, color 0.1s, text-shadow 0.4s;
+      user-select: none;
+      position: relative;
+      z-index: 1;
+      text-shadow: var(--glow);
+    }
+
+    .count.bump {
+      transform: scale(1.09);
+      color: var(--accent);
+      text-shadow: var(--glow);
+    }
+
+    .count-shadow {
+      font-family: var(--font-display);
+      font-size: clamp(7rem, 22vw, 16rem);
+      line-height: 1;
+      position: absolute;
+      top: 8px; left: 8px;
+      color: var(--shadow-color);
+      opacity: 0.18;
+      user-select: none;
+      z-index: 0;
+      width: 100%;
+      transition: color 0.4s;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.82rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      padding: 0.9rem 2rem;
+      border-radius: 2px;
+      transition: transform 0.1s, box-shadow 0.15s, background 0.4s, color 0.4s, border-color 0.4s;
+    }
+    .btn:active { transform: translateY(2px) !important; }
+
+    .btn-increment {
+      background: var(--accent);
+      color: var(--btn-inc-text);
+      font-weight: 500;
+      box-shadow: 4px 4px 0 var(--accent2);
+    }
+    .btn-increment:hover {
+      box-shadow: 6px 6px 0 var(--accent2), var(--glow);
+      transform: translate(-1px, -1px);
+    }
+
+    .btn-decrement {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--muted);
+    }
+    .btn-decrement:hover { color: var(--accent2); border-color: var(--accent2); }
+
+    .btn-reset {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      font-size: 0.68rem;
+    }
+    .btn-reset:hover { color: var(--text); }
+
+    /* ── Ticks ── */
+    .ticks {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+      margin-bottom: 2rem;
+    }
+
+    .tick {
+      width: 2px;
+      height: 14px;
+      background: var(--tick-bg);
+      border-radius: 1px;
+      transition: background 0.3s, height 0.3s, box-shadow 0.3s;
+    }
+    .tick.active {
+      background: var(--accent);
+      height: 24px;
+      box-shadow: var(--glow);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="theme-bar">
+    <button class="theme-btn active" onclick="setTheme('dark',this)">Dark</button>
+    <button class="theme-btn"        onclick="setTheme('mono',this)">Mono</button>
+    <button class="theme-btn"        onclick="setTheme('scifi',this)">Sci-Fi</button>
+  </div>
+
+  <div class="wrapper">
+    <p class="label">Count</p>
+
+    <div class="ticks" id="ticks"></div>
+
+    <div class="display">
+      <div class="ring"></div>
+      <div class="bracket bracket-tl"></div>
+      <div class="bracket bracket-tr"></div>
+      <div class="bracket bracket-bl"></div>
+      <div class="bracket bracket-br"></div>
+      <div class="mono-line"></div>
+      <div class="count-shadow" id="shadow">0</div>
+      <span class="count" id="count">0</span>
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-decrement" onclick="change(-1)">− Dec</button>
+      <button class="btn btn-increment" onclick="change(1)">+ Increment</button>
+      <button class="btn btn-reset"     onclick="reset()">Reset</button>
+    </div>
+  </div>
+
+  <script>
+    let value = 0;
+    const countEl  = document.getElementById('count');
+    const shadowEl = document.getElementById('shadow');
+    const ticksEl  = document.getElementById('ticks');
+
+    for (let i = 0; i < 10; i++) {
+      const d = document.createElement('div');
+      d.className = 'tick';
+      ticksEl.appendChild(d);
+    }
+
+    function updateTicks() {
+      const ticks = ticksEl.querySelectorAll('.tick');
+      const active = Math.min(Math.abs(value) % 10, 10);
+      ticks.forEach((t, i) => t.classList.toggle('active', i < active));
+    }
+
+    function change(delta) {
+      value += delta;
+      countEl.textContent  = value;
+      shadowEl.textContent = value;
+      countEl.classList.remove('bump');
+      void countEl.offsetWidth;
+      countEl.classList.add('bump');
+      updateTicks();
+      setTimeout(() => countEl.classList.remove('bump'), 130);
+    }
+
+    function reset() {
+      value = 0;
+      countEl.textContent  = 0;
+      shadowEl.textContent = 0;
+      updateTicks();
+    }
+
+    function setTheme(t, btn) {
+      document.documentElement.setAttribute('data-theme', t);
+      document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
